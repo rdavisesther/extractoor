@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: subgen-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_PATH=/app/data/subdomain-generator.db
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - RATE_LIMIT_WINDOW_MS=60000
+      - RATE_LIMIT_MAX=60
+      - WORKER_POOL_SIZE=${WORKER_POOL_SIZE:-0}
+    volumes:
+      - subgen_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL optional (backend falls back to SQLite if not configured)
+  postgres:
+    image: postgres:16-alpine
+    container_name: subgen-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-subgen}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-subgen}
+      - POSTGRES_DB=${POSTGRES_DB:-subgen}
+    ports:
+      - "5432:5432"
+    volumes:
+      - subgen_pg:/var/lib/postgresql/data
+    profiles:
+      - postgres
+
+volumes:
+  subgen_data:
+  subgen_pg:

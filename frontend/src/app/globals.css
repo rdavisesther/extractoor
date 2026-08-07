@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-slate-700;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  @apply animate-shimmer rounded-lg bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:1000px_100%];
+}
+.dark .skeleton {
+  @apply from-slate-800 via-slate-700 to-slate-800;
+}
+
+/* Thin scrollbar for results list */
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
