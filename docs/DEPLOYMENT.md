@@ -114,6 +114,12 @@ The backend ships a serverless entrypoint (`backend/api/index.ts` + `backend/ver
 1. Create a Vercel project, set **Root Directory** to `backend`.
 2. Deploy. Your API URL will be `https://<your-api-project>.vercel.app/api`.
 
+   `backend/vercel.json` adds a rewrite so **every** `/api/*` path reaches the
+   Express app (filesystem functions only match single-segment paths on Vercel).
+   Verify with `https://<your-api-project>.vercel.app/api/health` — it should
+   return a JSON health payload. Visiting the project root (`/`) also returns
+   the health JSON instead of a 404.
+
 Serverless caveats:
 
 - **History is in-memory** on Vercel (Lambda filesystems are ephemeral) — the app auto-falls back to the memory store if the SQLite binary can't load.
