@@ -103,35 +103,50 @@ server {
 
 ## 2. Deploy the Frontend to Vercel
 
-1. Push the repo to GitHub/GitLab (see below).
-2. Import the repository in Vercel and set the **Root Directory** to `frontend` (the monorepo contains the Next.js app there).
-3. Set the environment variable (in Vercel → Project → Settings → Environment Variables):
+> Fastest end-to-end setup: run **both** projects on Vercel — backend as a serverless
+> function (Root Directory `backend`), frontend as the Next.js app (Root Directory
+> `frontend`). Two Vercel projects, one repo.
 
-   ```
-   NEXT_PUBLIC_API_URL=https://api.example.com/api
-   ```
+### Step 1 — Deploy the API to Vercel (serverless)
 
-   > `NEXT_PUBLIC_*` variables are inlined at build time. Re-deploy if you change it.
+The backend ships a serverless entrypoint (`backend/api/index.ts` + `backend/vercel.json`):
 
-4. Deploy. The dashboard is served at your Vercel URL.
-
-`frontend/vercel.json` already configures the framework (`nextjs`) and clean URLs — nothing else is required.
-
-> **Repo hygiene for Vercel:** `backend/` and `frontend/` are separate `package.json` projects. Vercel ignores the other one based on the Root Directory, so both can live in one repo.
-
-### Optional: deploy the API to Vercel too
-
-The backend ships a serverless entrypoint (`backend/api/index.ts` + `backend/vercel.json`), so you can run the API on Vercel as a separate project:
-
-1. Create a second Vercel project and set **Root Directory** to `backend`.
-2. That's it — `api/index.ts` is picked up automatically (60 s max duration).
+1. Create a Vercel project, set **Root Directory** to `backend`.
+2. Deploy. Your API URL will be `https://<your-api-project>.vercel.app/api`.
 
 Serverless caveats:
 
 - **History is in-memory** on Vercel (Lambda filesystems are ephemeral) — the app auto-falls back to the memory store if the SQLite binary can't load.
 - **Generation runs on the main thread** on Vercel (workers are disabled via `VERCEL=1`), so very large counts are slower than the VPS build. Use the VPS/Docker backend for millions.
 
-For persistent history and full performance, prefer the VPS backend.
+### Step 2 — Deploy the dashboard to Vercel
+
+1. Create a second Vercel project and set the **Root Directory** to `frontend` (the monorepo contains the Next.js app there).
+2. Set the environment variable (in Vercel → Project → Settings → Environment Variables):
+
+   ```
+   NEXT_PUBLIC_API_URL=https://<your-api-project>.vercel.app/api
+   ```
+
+   > `NEXT_PUBLIC_*` variables are inlined at build time. Re-deploy if you change it.
+
+3. Deploy. The dashboard is served at your Vercel URL.
+
+`frontend/vercel.json` already configures the framework (`nextjs`) and clean URLs — nothing else is required.
+
+> **Repo hygiene for Vercel:** `backend/` and `frontend/` are separate `package.json` projects. Vercel ignores the other one based on the Root Directory, so both can live in one repo.
+
+### Troubleshooting — "deploys but dashboard shows *Backend API not reachable*"
+
+By far the most common cause: `NEXT_PUBLIC_API_URL` is **not set** on the frontend
+project, so the built bundle falls back to `http://localhost:4000/api` (the local dev
+default) and the browser can't reach it. The dashboard now shows a banner with the
+exact URL it's trying and a **Retry** button.
+
+1. Set `NEXT_PUBLIC_API_URL` to your deployed API, e.g. `https://<your-api-project>.vercel.app/api` — **not** `localhost`, and **https** (browsers block `http://` from an `https://` page).
+2. Re-deploy the frontend (env changes are build-time).
+3. CORS is already open (`CORS_ORIGIN=*` default) — no extra config needed for the API.
+4. Hit **Retry** on the dashboard to re-check without a reload.
 
 ---
 

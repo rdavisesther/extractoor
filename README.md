@@ -139,8 +139,10 @@ docker compose --profile postgres up -d postgres
 ## Deploy to Vercel
 
 1. Push this repo to GitHub (see `docs/DEPLOYMENT.md` §0).
-2. **Frontend** → import the repo in Vercel, set **Root Directory** to `frontend`, add env `NEXT_PUBLIC_API_URL` → deploy.
-3. **Backend (optional)** → second Vercel project with **Root Directory** `backend` (serverless entry at `backend/api/index.ts`).
+2. **Backend** → import the repo in Vercel, set **Root Directory** to `backend` (serverless entry at `backend/api/index.ts`).
+3. **Frontend** → second Vercel project, set **Root Directory** to `frontend`, add env `NEXT_PUBLIC_API_URL=https://<your-api>.vercel.app/api` → deploy.
+
+> If the dashboard loads but shows **"Backend API not reachable"**, the env var above is missing or wrong — set it and re-deploy (see `docs/DEPLOYMENT.md` → Troubleshooting).
 
 For persistent history and million-scale performance, run the backend on a VPS instead (see `docs/DEPLOYMENT.md`).
 

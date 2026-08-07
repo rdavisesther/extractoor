@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Card, Skeleton } from '@/components/ui';
+import { Card, Button, Skeleton } from '@/components/ui';
 import { Header } from '@/components/Header';
 import { DomainInput } from '@/components/DomainInput';
 import { OptionsPanel } from '@/components/OptionsPanel';
@@ -10,7 +10,8 @@ import { ResultsPanel } from '@/components/ResultsPanel';
 import { HistoryPanel } from '@/components/HistoryPanel';
 import { ToastStack, type Toast } from '@/components/Toast';
 import { useGenerator } from '@/hooks/useGenerator';
-import { fetchHealth } from '@/lib/api';
+import { fetchHealth, API_BASE } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import type { HistoryRecord } from '@/types';
 
 export default function Dashboard() {
@@ -31,14 +32,23 @@ export default function Dashboard() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  useEffect(() => {
-    void fetchHealth()
-      .then((h) => {
-        setConnected(true);
-        setWorkerCount(h.workers);
-      })
-      .catch(() => setConnected(false));
+  const checkHealth = useCallback(async () => {
+    try {
+      const h = await fetchHealth();
+      setConnected(true);
+      setWorkerCount(h.workers);
+      return true;
+    } catch {
+      setConnected(false);
+      return false;
+    }
   }, []);
+
+  useEffect(() => {
+    void checkHealth();
+  }, [checkHealth]);
+
+  const isUsingLocalFallback = API_BASE.includes('localhost') || API_BASE.includes('127.0.0.1');
 
   const handleOpenRecord = useCallback(
     (record: HistoryRecord) => {
@@ -61,6 +71,51 @@ export default function Dashboard() {
     <div className="min-h-screen">
       <Header connected={connected === true} workerCount={workerCount} />
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+      {connected === false ? (
+        <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+          <Card
+            className={cn(
+              'border-amber-300 bg-amber-50 p-5 dark:border-amber-900/60 dark:bg-amber-950/30',
+            )}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-2">
+                <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+                  Backend API not reachable
+                </h2>
+                <p className="text-sm text-amber-800/90 dark:text-amber-200/80">
+                  The dashboard is talking to{' '}
+                  <code className="rounded bg-amber-100/80 px-1.5 py-0.5 font-mono text-xs text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+                    {API_BASE}
+                  </code>{' '}
+                  and got no response.
+                </p>
+                {isUsingLocalFallback ? (
+                  <p className="text-sm text-amber-800/90 dark:text-amber-200/80">
+                    That&apos;s the local development default. On Vercel, add a{' '}
+                    <code className="rounded bg-amber-100/80 px-1.5 py-0.5 font-mono text-xs text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+                      NEXT_PUBLIC_API_URL
+                    </code>{' '}
+                    environment variable pointing to your deployed API (e.g.{' '}
+                    <code className="rounded bg-amber-100/80 px-1.5 py-0.5 font-mono text-xs text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+                      https://your-api.vercel.app/api
+                    </code>
+                    ), then re-deploy. See docs/DEPLOYMENT.md.
+                  </p>
+                ) : (
+                  <p className="text-sm text-amber-800/90 dark:text-amber-200/80">
+                    Check that the API is deployed and that this URL is correct, then retry.
+                  </p>
+                )}
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => void checkHealth()}>
+                Retry
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
