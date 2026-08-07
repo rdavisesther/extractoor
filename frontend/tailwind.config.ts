@@ -25,7 +25,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       boxShadow: {
