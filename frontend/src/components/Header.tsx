@@ -1,37 +1,55 @@
 'use client';
 
-import { Globe2, ServerCog } from 'lucide-react';
-import { ThemeToggle } from './ThemeToggle';
+import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { checkHealth } from '@/lib/api';
+import { Activity } from 'lucide-react';
 
-export function Header({ connected, workerCount }: { connected: boolean; workerCount: number }) {
+interface HeaderProps {
+  title: string;
+  description?: string;
+  className?: string;
+  actions?: React.ReactNode;
+}
+
+export function Header({ title, description, className, actions }: HeaderProps) {
+  const [online, setOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      const ok = await checkHealth();
+      if (mounted) setOnline(ok);
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-950/80">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-md shadow-primary-500/30">
-            <Globe2 className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">
-              Bulk Subdomain Generator
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {connected ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  API online · {workerCount} worker threads · 38k+ prefixes
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                  <ServerCog className="h-3 w-3" />
-                  API unreachable — start the backend (see README)
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-        <ThemeToggle />
+    <div className={cn('flex items-start justify-between gap-4', className)}>
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
+        {description && <p className="mt-0.5 text-sm text-gray-500">{description}</p>}
       </div>
-    </header>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        {actions}
+        <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs shadow-sm">
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full',
+              online === null
+                ? 'bg-gray-300 animate-pulse-dot'
+                : online
+                  ? 'bg-emerald-500'
+                  : 'bg-red-500',
+            )}
+          />
+          <span className="text-gray-600">
+            {online === null ? 'Checking...' : online ? 'API Connected' : 'API Offline'}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

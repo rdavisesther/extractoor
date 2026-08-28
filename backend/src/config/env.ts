@@ -1,17 +1,12 @@
-/**
- * Central configuration loaded from environment variables.
- * Every value has a safe default so the app runs out of the box.
- */
-
 export interface AppConfig {
   port: number;
   nodeEnv: string;
   corsOrigin: string;
   rateLimitWindowMs: number;
   rateLimitMax: number;
-  databasePath: string;
-  workerPoolSize: number;
-  maxSubdomains: number;
+  extractionRateLimitMax: number;
+  maxExtractionCount: number;
+  maxConcurrentExtractions: number;
   isProd: boolean;
 }
 
@@ -26,8 +21,8 @@ export const config: AppConfig = {
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
   rateLimitWindowMs: toInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
   rateLimitMax: toInt(process.env.RATE_LIMIT_MAX, 120),
-  databasePath: process.env.DATABASE_PATH ?? './data/subdomain-generator.db',
-  workerPoolSize: toInt(process.env.WORKER_POOL_SIZE, 0),
-  maxSubdomains: toInt(process.env.MAX_SUBDOMAINS, 1_000_000),
+  extractionRateLimitMax: toInt(process.env.EXTRACTION_RATE_LIMIT_MAX, 10),
+  maxExtractionCount: toInt(process.env.MAX_EXTRACTION_COUNT, 1000),
+  maxConcurrentExtractions: toInt(process.env.MAX_CONCURRENT_EXTRACTIONS, 5),
   isProd: process.env.NODE_ENV === 'production',
 };

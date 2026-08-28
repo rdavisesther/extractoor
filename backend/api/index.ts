@@ -1,16 +1,11 @@
 /**
- * Vercel serverless entrypoint.
+ * Vercel serverless entrypoint for the MailCMH API.
  *
- * Lets the Express API run on Vercel as a Node.js function (Root Directory:
- * `backend`). History degrades to the in-memory store because Lambda filesystems
- * are ephemeral; for persistent history, deploy the standalone backend instead
- * (see docs/DEPLOYMENT.md).
+ * Exports the Express app as the handler so Vercel's Node.js runtime
+ * can invoke it directly (GET/POST/OPTIONS etc. are all handled).
  */
-import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createApp } from '../src/app';
 
-const { app } = createApp({ databasePath: ':memory:' });
+const app = createApp();
 
-export default function handler(req: IncomingMessage, res: ServerResponse): void {
-  app(req as never, res as never);
-}
+export default app;

@@ -1,55 +1,46 @@
-# Bulk Subdomain Generator
+# MailCMH — Email & DNS Tooling Dashboard
 
-A fast, modern web application that generates **hundreds to millions of realistic subdomains** from one or many root domains.
-
-```
-example.com  →  mail.example.com · www.example.com · app.example.com
-                 api.example.com · blog.example.com · cdn.example.com
-```
-
-**Live example**
+A clean, production-style SaaS dashboard for **email extraction** (via IMAP) and **DNS lookups**.
 
 ```
-Input:  example.com
-Output:
-  mail.example.com
-  www.example.com
-  app.example.com
-  api.example.com
-  blog.example.com
-  cdn.example.com
-  ...
+Mailbox connection  →  Configure folders & fields  →  Real-time extraction  →  Results table
 ```
+
+Live with real data only — no fake rows. Credentials are never stored, logged, or returned.
 
 ---
 
-## Highlights
+## Features
 
-- ⚡ **Worker-thread parallelism** — generates 100,000 subdomains in under half a second.
-- 📖 **20,000+ prefix dictionary** across 21 categories (technology, email, finance, insurance, medical, security, banking, hosting, AI, crypto, and more).
-- 🤖 **AI Smart Generator** — curated, realistic prefixes (`customer-support`, `billing`, `gateway`, …).
-- 🔀 **Random mode** — readable creative prefixes (`horizon`, `nova`, `vertex`, …).
-- 🔢 **Pattern generator** — `mail01, mail02, …`, `server001, …`, with configurable start/digits/direction.
-- 🧹 **Automatic duplicate detection** — never repeats a subdomain.
-- 🗂 **Bulk input** — textarea, `.txt` upload, or `.csv` upload (first column read automatically).
-- 💾 **Exports** — TXT, CSV, JSON, Excel (`.xlsx`), Copy All.
-- 🕘 **History** — reopen and re-download past generations.
-- 🔍 **Search / filter / sort** — contains / starts-with / ends-with / length + 4 sort modes.
-- 🌗 **Dark mode** with remembered preference.
-- 📊 **Progress bar, statistics** (total / unique / duplicates / generation time).
-- 🛡 **Security-first** — input validation, XSS sanitization, SQL-injection-safe (parameterized queries), rate limiting, Helmet, CORS.
+### Email Extraction
+- **Mailbox connection** — Gmail / Outlook / Yahoo / iCloud / custom IMAP (auto provider detection with manual host/port override).
+- **Test Connection** — live check with clear, human-readable errors (no raw stack traces).
+- **Category (folder) selection** — loaded dynamically from the mailbox; select / clear / search + counter.
+- **Data field selection** — From Name, From Email, To, CC, BCC, Subject, Date, Message ID, Reply-To, Body, HTML, Attachments.
+- **Email range** — start index + count with quick presets and server-enforced limits.
+- **Real-time progress** — SSE streaming: processed / found / skipped / errors, current folder, with rows appearing progressively.
+- **Professional results table** — checkbox selection, row number, category badge, domain, per-column filters, sorting, sticky header, pagination (25–250/page), subject/email truncation + tooltips, row actions.
+- **Bulk toolbar** — copy emails, export CSV / TXT / JSON, clear selection.
+- **Exports** — CSV (UTF-8 + proper escaping), JSON, TXT (deduped, one per line), XLSX (styled + autofilter).
+- **Stats** — found / processed / duplicates / errors / selected, plus a **remove duplicates** action.
+
+### DNS Lookup
+- A, AAAA, MX, TXT, CNAME, NS, SOA, SRV, DMARC, SPF.
+- Search domain, select record types, live results with TTL / priority, per-record copy.
 
 ---
 
 ## Tech Stack
 
-| Layer     | Technology                                   |
-| --------- | -------------------------------------------- |
+| Layer     | Technology                              |
+| --------- | --------------------------------------- |
 | Frontend  | React, Next.js 14 (App Router), Tailwind CSS, TypeScript |
-| Backend   | Node.js, Express, TypeScript                 |
-| Database  | SQLite (dev) · PostgreSQL-ready              |
-| Performance | Worker threads (`node:worker_threads`)      |
-| Deploy    | Docker · Vercel (frontend + optional API) · VPS (backend) |
+| Backend   | Node.js, Express, TypeScript            |
+| Email     | `imapflow` + `mailparser`               |
+| DNS       | Node `dns` module                       |
+| Exports   | `exceljs` (XLSX), hand-rolled CSV/JSON/TXT |
+| Security  | Helmet, CORS, Zod validation, rate limiting, credential-safe logging |
+| Deploy    | Vercel (frontend **and** backend)      |
 
 ---
 
@@ -57,192 +48,133 @@ Output:
 
 ```
 subdomain-generator/
-├── backend/                  # Express REST API
+├── backend/                  # Express REST API (deployed to Vercel as a serverless function)
+│   ├── api/index.ts          # Vercel serverless entrypoint (exports the Express app)
 │   ├── src/
-│   │   ├── controllers/      # request handling
-│   │   ├── services/         # generation, dictionary, history, export
-│   │   ├── workers/          # worker-thread pool + worker entry
-│   │   ├── middleware/       # security, rate-limit, validation, errors
-│   │   ├── db/               # SQLite bootstrap
-│   │   ├── utils/            # validation, sanitization, logging
+│   │   ├── controllers/      # email + dns request handling
+│   │   ├── services/         # imap, dns, export
+│   │   ├── middleware/       # security, rate-limit, errors
+│   │   ├── config/           # env config
 │   │   └── types/            # shared contracts
-│   ├── api/index.ts          # Vercel serverless entrypoint
-│   ├── data/dictionary.json  # 38k+ generated prefixes (do not edit by hand)
-│   ├── scripts/              # dictionary generator
-│   ├── tests/                # Vitest unit + integration tests
-│   ├── vercel.json           # Vercel function config
-│   └── Dockerfile
-├── frontend/                 # Next.js dashboard
-│   ├── src/
-│   │   ├── app/              # layout + dashboard page
-│   │   ├── components/       # modular UI components
-│   │   ├── hooks/            # central generator state hook
-│   │   ├── lib/              # API client, downloads, utils, theme
-│   │   └── types/            # API contracts
-│   ├── vercel.json           # Vercel framework config
-│   └── Dockerfile
-├── docs/
-│   ├── API.md                # REST API reference
-│   └── DEPLOYMENT.md         # VPS / Vercel / Docker guides
-├── docker-compose.yml
-└── docker/.env.example
+│   ├── vercel.json           # serverless function config
+│   └── .env.example
+└── frontend/                 # Next.js dashboard (deployed to Vercel)
+    ├── src/
+    │   ├── app/              # pages (email-extraction, dns-lookup) + layout
+    │   ├── components/       # ui + feature components
+    │   ├── hooks/            # useEmailExtraction, useDnsLookup
+    │   ├── lib/              # api client, utils
+    │   └── types/
+    ├── vercel.json
+    └── .env.example
 ```
 
 ---
 
-## Quick Start (Development)
+## Local Development
 
 ### 1. Backend API
-
 ```bash
 cd backend
 npm install
-npm run dictionary     # (re)generates data/dictionary.json (38k+ prefixes)
-npm run dev            # starts API on http://localhost:4000
+npm run dev            # http://localhost:4000
 ```
 
 ### 2. Frontend dashboard
-
 ```bash
 cd frontend
 npm install
-npm run dev            # starts Next.js on http://localhost:3000
+npm run dev            # http://localhost:3000
 ```
 
-Open **http://localhost:3000**. The dashboard auto-detects the API at `http://localhost:4000/api`.
-
-> Set `NEXT_PUBLIC_API_URL` to point at a deployed backend:
-> ```bash
-> # frontend/.env.local
-> NEXT_PUBLIC_API_URL=https://api.your-domain.com/api
-> ```
+Open **http://localhost:3000**. Without `NEXT_PUBLIC_API_URL`, the frontend proxies `/api/*` to `http://localhost:4000` (configurable via `NEXT_PUBLIC_API_PROXY`).
 
 ---
 
-## Quick Start (Docker)
+## Deploy to Vercel (two projects, GitHub integration)
 
-```bash
-cp docker/.env.example .env
-docker compose up -d --build
-# Frontend is deployed separately (see docs/DEPLOYMENT.md),
-# but the backend container now listens on http://localhost:4000
-```
+MailCMH ships as **two separate Vercel projects** sharing this one GitHub repository. Each Vercel project is configured with a **Root Directory**, so a push to `main` auto-deploys both.
 
-Optional PostgreSQL (for when you swap the history store to Postgres):
+### Project 1 — Backend API
+1. Push this repo to GitHub.
+2. In Vercel: **New Project → Import** the repo.
+3. Set **Framework Preset** to *Other* and **Root Directory** to **`backend`**.
+4. Add environment variables (Project → Settings → Environment Variables) as needed:
+   - `CORS_ORIGIN` — set to your frontend URL (e.g. `https://your-app.vercel.app`) or `*` for development.
+   - `EXTRACTION_RATE_LIMIT_MAX`, `MAX_EXTRACTION_COUNT`, `MAX_CONCURRENT_EXTRACTIONS` (optional).
+5. Deploy. Note your backend URL: `https://<your-backend>.vercel.app`.
 
-```bash
-docker compose --profile postgres up -d postgres
-```
+> Entry point is `backend/api/index.ts` (`vercel.json` routes all `/api/*` and `/` to it). Requires **Node 20.x** on the function runtime.
 
----
+### Project 2 — Frontend
+1. In Vercel: **New Project → Import** the same repo.
+2. **Framework Preset** auto-detects *Next.js*. Set **Root Directory** to **`frontend`**.
+3. Add env var:
+   - `NEXT_PUBLIC_API_URL` = `https://<your-backend>.vercel.app`  *(no trailing slash)*
+4. Deploy. Open `https://<your-app>.vercel.app`.
 
-## Deploy to Vercel
-
-1. Push this repo to GitHub (see `docs/DEPLOYMENT.md` §0).
-2. **Backend** → import the repo in Vercel, set **Root Directory** to `backend` (serverless entry at `backend/api/index.ts`).
-3. **Frontend** → second Vercel project, set **Root Directory** to `frontend`, add env `NEXT_PUBLIC_API_URL=https://<your-api>.vercel.app/api` → deploy.
-
-> If the dashboard loads but shows **"Backend API not reachable"**, the env var above is missing or wrong — set it and re-deploy (see `docs/DEPLOYMENT.md` → Troubleshooting).
-
-For persistent history and million-scale performance, run the backend on a VPS instead (see `docs/DEPLOYMENT.md`).
-
----
-
-## REST API (summary)
-
-```http
-POST /api/generate
-```
-
-```json
-{
-  "domains": ["example.com"],
-  "count": 1000
-}
-```
-
-```json
-{
-  "success": true,
-  "total": 1000,
-  "unique": 1000,
-  "duplicatesRemoved": 0,
-  "generationTimeMs": 42,
-  "historyId": 12,
-  "results": ["mail.example.com", "www.example.com", "..."]
-}
-```
-
-Other endpoints: `GET /api/health`, `GET /api/history`, `GET /api/history/:id`, `GET /api/history/:id/export?format=…`, `DELETE /api/history/:id`, `DELETE /api/history`.
-
-Full reference with every option (categories, patterns, AI mode, formats): **[docs/API.md](docs/API.md)**.
+### GitHub auto-deploy
+Once both projects are connected to the repo, every push to `main` triggers rebuilds of both projects (configure in Vercel → Project → Settings → Git → "Deploy Hooks" / production branch).
 
 ---
 
 ## Environment Variables
 
-| Variable                | Default                       | Used by    | Description                                  |
-| ----------------------- | ----------------------------- | ---------- | -------------------------------------------- |
-| `PORT`                  | `4000`                        | backend    | HTTP port                                    |
-| `NODE_ENV`              | `development`                 | backend    | runtime environment                          |
-| `CORS_ORIGIN`           | `*`                           | backend    | allowed origin(s), comma separated           |
-| `RATE_LIMIT_WINDOW_MS`  | `60000`                       | backend    | rate-limit window                            |
-| `RATE_LIMIT_MAX`        | `120`                         | backend    | requests per window per IP                   |
-| `DATABASE_PATH`         | `./data/subdomain-generator.db` | backend  | SQLite file (or `:memory:`)                  |
-| `WORKER_POOL_SIZE`      | `0` (auto)                    | backend    | worker thread count                          |
-| `MAX_SUBDOMAINS`        | `1000000`                     | backend    | per-request ceiling                          |
-| `NEXT_PUBLIC_API_URL`   | `http://localhost:4000/api`   | frontend   | backend base URL (baked in at build)         |
-
-See `backend/.env.example` and `docker/.env.example`.
+| Variable                    | Default               | Used by   | Description                                 |
+| --------------------------- | --------------------- | --------- | ------------------------------------------- |
+| `PORT`                      | `4000`                | backend   | local HTTP port                             |
+| `NODE_ENV`                  | `development`         | backend   | runtime environment                         |
+| `CORS_ORIGIN`               | `*`                   | backend   | allowed origin(s), comma separated          |
+| `RATE_LIMIT_WINDOW_MS`      | `60000`               | backend   | rate-limit window                           |
+| `RATE_LIMIT_MAX`            | `120`                 | backend   | requests per window per IP                  |
+| `EXTRACTION_RATE_LIMIT_MAX` | `10`                  | backend   | extraction requests per window per IP       |
+| `MAX_EXTRACTION_COUNT`      | `1000`                | backend   | max emails per extraction request           |
+| `MAX_CONCURRENT_EXTRACTIONS`| `5`                   | backend   | concurrent extractions across all clients   |
+| `NEXT_PUBLIC_API_URL`       | *(empty → local proxy)* | frontend | backend base URL (baked in at build time)   |
+| `NEXT_PUBLIC_API_PROXY`     | `http://localhost:4000` | frontend | local dev proxy target (when API_URL empty) |
 
 ---
 
-## Testing & Quality
+## API Reference (summary)
+
+**Health:** `GET /api/health`
+
+**Email:**
+- `POST /api/email/test-connection` — `{ email, password, host?, port? }`
+- `POST /api/email/folders` — `{ email, password, host?, port? }`
+- `POST /api/email/extract` — SSE stream; `{ email, password, folders, startFrom, count, fields }`
+- `POST /api/email/export` — `{ data, fields, format: csv|json|xlsx|txt }`
+
+**DNS:**
+- `GET /api/dns/types`
+- `POST /api/dns/lookup` — `{ domain, types }`
+
+---
+
+## Security Notes
+
+- Mailbox credentials are **in-memory per request only** — never logged, stored, or returned by the API.
+- Logger redacts password/secret keys.
+- Rate limits (global + extraction) and per-request extraction caps prevent abuse.
+- Zod validation on every input; Helmet headers; CORS locked via `CORS_ORIGIN`.
+- Clean human-readable error messages; full details are kept server-side only.
+
+---
+
+## Quality
 
 ```bash
 # Backend
 cd backend
-npm test            # 41 unit + integration tests
-npm run lint:check  # ESLint
-npm run typecheck   # TypeScript
-npm run build       # production compile
+npm run typecheck            # TypeScript
+npm run typecheck:serverless # serverless entrypoint typecheck
+npm run build                # production compile
 
 # Frontend
 cd frontend
-npm run lint        # ESLint (next/core-web-vitals)
-npm run typecheck   # TypeScript
-npm run build       # Next.js production build
+npm run typecheck
+npm run build                # Next.js production build
 ```
-
----
-
-## Performance
-
-| Configuration              | Result                        |
-| -------------------------- | ----------------------------- |
-| 1,000 subdomains           | ~10–20 ms                     |
-| 100,000 subdomains         | ~440 ms across 8 worker threads |
-| Millions                   | supported via `MAX_SUBDOMAINS` (worker pool scales to CPU cores) |
-
-Generation is chunked across a persistent **worker-thread pool** (`cpus - 1`, max 8), so the HTTP server never blocks and the UI never freezes.
-
----
-
-## Security
-
-- **Input validation** — Zod schemas + strict domain regex on every request.
-- **XSS prevention** — prefixes are sanitized to DNS-safe labels; output is rendered as text, never HTML.
-- **SQL injection** — all queries use parameterized statements (`better-sqlite3` prepared statements).
-- **Helmet** sets secure HTTP headers; **CORS** is locked to configured origins.
-- **Rate limiting** on the API and stricter limits on the expensive `/generate` route.
-- No secrets are stored or logged.
-
----
-
-## Documentation
-
-- [API Reference](docs/API.md)
-- [Deployment Guide (Vercel + VPS + Docker)](docs/DEPLOYMENT.md)
 
 ## License
 

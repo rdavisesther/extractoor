@@ -1,5 +1,5 @@
 {
-  "name": "subdomain-generator-web",
+  "name": "mailcmh-web",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.474.0",

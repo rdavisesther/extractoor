@@ -1,12 +1,8 @@
-/**
- * Security middleware: helmet + CORS + JSON body parsing limits.
- */
 import helmet from 'helmet';
 import cors from 'cors';
 import express from 'express';
 import { config } from '../config/env';
 
-/** Parses the CORS_ORIGIN env value: "*", a single origin, or a comma list. */
 function resolveCorsOrigin(): string | string[] {
   const value = config.corsOrigin;
   if (value === '*') return '*';
@@ -17,7 +13,7 @@ function resolveCorsOrigin(): string | string[] {
 }
 
 export function applySecurity(app: express.Express): void {
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   app.use(
     cors({
@@ -27,6 +23,6 @@ export function applySecurity(app: express.Express): void {
     }),
   );
 
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+  app.use(express.json({ limit: '5mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '5mb' }));
 }

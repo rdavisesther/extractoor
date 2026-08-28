@@ -1,127 +1,154 @@
-/**
- * Shared request/response contracts for the Subdomain Generator API.
- * Mirrored by the frontend `src/types/index.ts`.
- */
-
-/** Available prefix categories. */
-export const CATEGORIES = [
-  'common',
-  'business',
-  'corporate',
-  'security',
-  'cloud',
-  'hosting',
-  'api',
-  'finance',
-  'insurance',
-  'education',
-  'medical',
-  'technology',
-  'government',
-  'email',
-  'marketing',
-  'ecommerce',
-  'streaming',
-  'gaming',
-  'ai',
-  'crypto',
-  'random',
-] as const;
-
-export type Category = (typeof CATEGORIES)[number];
-
-/** Output formats the generator can produce. */
-export const OUTPUT_FORMATS = ['subdomain', 'https', 'http'] as const;
-export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
-
-/** Sort strategies applied client side. */
-export const SORT_MODES = ['alphabetical', 'reverse', 'length', 'random'] as const;
-export type SortMode = (typeof SORT_MODES)[number];
-
-/** Pattern generator direction. */
-export type PatternDirection = 'asc' | 'desc';
-
-/** Configuration for the pattern generator (e.g. mail01, mail02...). */
-export interface PatternConfig {
-  enabled: boolean;
-  /** Base prefixes, e.g. ["mail", "mx", "smtp"]. */
-  bases: string[];
-  /** Starting integer. */
-  start: number;
-  /** Number of padded digits, e.g. 2 -> 01. */
-  digits: number;
-  /** Ascending or descending order. */
-  direction: PatternDirection;
+export interface MailboxCredentials {
+  email: string;
+  password: string;
+  host?: string;
+  port?: number;
+  secure?: boolean;
 }
 
-/** Full generate request body. */
-export interface GenerateRequest {
-  /** Root domains, e.g. ["example.com"]. */
-  domains: string[];
-  /** How many subdomains to produce. */
+export interface ProviderConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  name: string;
+}
+
+export type ExtractField =
+  | 'fromName'
+  | 'fromEmail'
+  | 'to'
+  | 'cc'
+  | 'bcc'
+  | 'subject'
+  | 'date'
+  | 'messageId'
+  | 'replyTo'
+  | 'body'
+  | 'htmlBody'
+  | 'textBody'
+  | 'attachments';
+
+export const ALL_FIELDS: ExtractField[] = [
+  'fromName', 'fromEmail', 'to', 'cc', 'bcc', 'subject',
+  'date', 'messageId', 'replyTo', 'body', 'htmlBody',
+  'textBody', 'attachments',
+];
+
+export const FIELD_LABELS: Record<ExtractField, string> = {
+  fromName: 'From Name',
+  fromEmail: 'From Email',
+  to: 'To',
+  cc: 'CC',
+  bcc: 'BCC',
+  subject: 'Subject',
+  date: 'Date',
+  messageId: 'Message ID',
+  replyTo: 'Reply-To',
+  body: 'Email Body',
+  htmlBody: 'HTML Body',
+  textBody: 'Plain Text Body',
+  attachments: 'Attachments',
+};
+
+export interface ExtractOptions {
+  folders: string[];
+  startFrom: number;
   count: number;
-  /** Selected categories; empty means every category. */
-  categories: Category[];
-  /** Extra user prefixes. */
-  customPrefixes: string[];
-  /** Pattern generator config. */
-  pattern: PatternConfig;
-  /** Random readable-prefix mode. */
-  randomMode: boolean;
-  /** AI smart generator mode (curated realistic prefixes). */
-  aiMode: boolean;
-  /** Output formatting. */
-  format: OutputFormat;
-  /** Unique run id supplied by the client for progress correlation. */
-  requestId?: string;
+  fields: ExtractField[];
 }
 
-/** Statistics attached to every generation run. */
-export interface GenerationStats {
+export interface ExtractionProgress {
+  phase: 'connecting' | 'listing' | 'extracting' | 'complete';
+  currentFolder: string;
+  processed: number;
   total: number;
-  unique: number;
-  duplicatesRemoved: number;
-  generationTimeMs: number;
-  domainsUsed: number;
+  found: number;
+  skipped: number;
+  errors: number;
 }
 
-/** API success response. */
-export interface GenerateResponse {
-  success: true;
-  total: number;
-  unique: number;
-  duplicatesRemoved: number;
-  generationTimeMs: number;
-  results: string[];
+export interface ExtractionEvent {
+  type: 'progress' | 'complete' | 'error';
+  phase?: ExtractionProgress['phase'];
+  currentFolder?: string;
+  processed?: number;
+  total?: number;
+  found?: number;
+  skipped?: number;
+  errors?: number;
+  results?: EmailData[];
+  error?: string;
 }
 
-/** API error response. */
-export interface ErrorResponse {
-  success: false;
-  error: string;
-  details?: Record<string, unknown>;
+export interface EmailData {
+  uid: number;
+  folder: string;
+  fromName?: string;
+  fromEmail?: string;
+  to?: string;
+  cc?: string;
+  bcc?: string;
+  subject?: string;
+  date?: string;
+  messageId?: string;
+  replyTo?: string;
+  body?: string;
+  htmlBody?: string;
+  textBody?: string;
+  attachments?: string[];
 }
 
-/** History record. */
-export interface HistoryRecord {
-  id: number;
-  domains: string[];
+export interface Folder {
+  name: string;
+  path: string;
+  delimiter: string;
+  flags: string[];
+}
+
+export interface DnsQuery {
+  domain: string;
+  types: string[];
+}
+
+export interface DnsRecord {
+  type: string;
+  host: string;
+  value: string;
+  ttl?: number;
+  priority?: number;
+}
+
+export interface DnsResult {
+  domain: string;
+  records: DnsRecord[];
+  queryTime: number;
+}
+
+export type ExportFormat = 'csv' | 'json' | 'xlsx' | 'txt';
+
+export interface ExportRequest {
+  data: EmailData[];
+  fields: ExtractField[];
+  format: ExportFormat;
+}
+
+export interface TestConnectionRequest {
+  email: string;
+  password: string;
+  host?: string;
+  port?: number;
+}
+
+export interface ListFoldersRequest {
+  email: string;
+  password: string;
+  host?: string;
+  port?: number;
+}
+
+export interface ExtractRequest extends TestConnectionRequest {
+  folders: string[];
+  startFrom: number;
   count: number;
-  categories: Category[];
-  format: OutputFormat;
-  unique: number;
-  duplicatesRemoved: number;
-  generationTimeMs: number;
-  results: string[];
-  createdAt: string;
-}
-
-/** Health check response. */
-export interface HealthResponse {
-  status: 'ok';
-  uptime: number;
-  timestamp: string;
-  workers: number;
-  dictionarySize: number;
-  db: 'sqlite' | 'memory';
+  fields: ExtractField[];
 }

@@ -1,6 +1,3 @@
-/**
- * Centralized error handling.
- */
 import type { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 
@@ -34,6 +31,6 @@ export function errorHandler(
     return;
   }
 
-  logger.error('Unhandled error', { message: err instanceof Error ? err.message : err });
+  logger.error('Unhandled error', { message: err instanceof Error ? err.message : String(err) });
   res.status(500).json({ success: false, error: 'Internal server error.' });
 }
