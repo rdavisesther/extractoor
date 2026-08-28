@@ -1,180 +1,110 @@
-# MailCMH — Email & DNS Tooling Dashboard
+# MailCMH — Email Extractor (Python + Flask)
 
-A clean, production-style SaaS dashboard for **email extraction** (via IMAP) and **DNS lookups**.
+A clean, single-process **email extraction tool** that connects to any IMAP mailbox,
+pulls message data live, and displays it in a fast web UI — with export, copy,
+dedupe, and an auto-check for new emails.
 
 ```
-Mailbox connection  →  Configure folders & fields  →  Real-time extraction  →  Results table
+Mailbox → Test connection → Load folders → Pick fields → Extract → Results table
 ```
-
-Live with real data only — no fake rows. Credentials are never stored, logged, or returned.
 
 ---
 
-## Features
+## What it does
 
-### Email Extraction
-- **Mailbox connection** — Gmail / Outlook / Yahoo / iCloud / custom IMAP (auto provider detection with manual host/port override).
-- **Test Connection** — live check with clear, human-readable errors (no raw stack traces).
-- **Category (folder) selection** — loaded dynamically from the mailbox; select / clear / search + counter.
-- **Data field selection** — From Name, From Email, To, CC, BCC, Subject, Date, Message ID, Reply-To, Body, HTML, Attachments.
-- **Email range** — start index + count with quick presets and server-enforced limits.
-- **Real-time progress** — SSE streaming: processed / found / skipped / errors, current folder, with rows appearing progressively.
-- **Professional results table** — checkbox selection, row number, category badge, domain, per-column filters, sorting, sticky header, pagination (25–250/page), subject/email truncation + tooltips, row actions.
-- **Bulk toolbar** — copy emails, export CSV / TXT / JSON, clear selection.
-- **Exports** — CSV (UTF-8 + proper escaping), JSON, TXT (deduped, one per line), XLSX (styled + autofilter).
-- **Stats** — found / processed / duplicates / errors / selected, plus a **remove duplicates** action.
-
-### DNS Lookup
-- A, AAAA, MX, TXT, CNAME, NS, SOA, SRV, DMARC, SPF.
-- Search domain, select record types, live results with TTL / priority, per-record copy.
-
----
-
-## Tech Stack
-
-| Layer     | Technology                              |
-| --------- | --------------------------------------- |
-| Frontend  | React, Next.js 14 (App Router), Tailwind CSS, TypeScript |
-| Backend   | Node.js, Express, TypeScript            |
-| Email     | `imapflow` + `mailparser`               |
-| DNS       | Node `dns` module                       |
-| Exports   | `exceljs` (XLSX), hand-rolled CSV/JSON/TXT |
-| Security  | Helmet, CORS, Zod validation, rate limiting, credential-safe logging |
-| Deploy    | Vercel (frontend **and** backend)      |
+- **IMAP connection** — Gmail / Outlook / Hotmail / Yahoo / AOL / iCloud / custom
+  IMAP. Provider is auto-detected from the email; host & port can be overridden.
+- **Test connection** — live check with clear, human-readable errors
+  (wrong password, host unreachable, timeout, SSL, rate limit…). No raw stack traces.
+- **Folder selection** — list folders from the mailbox, search, multi-select with a counter.
+- **Field selection** — From Name, From Email, To, CC, BCC, Subject, Date, Message ID,
+  Reply-To, Body, HTML, attachments.
+- **Range** — start index + how many messages to scan, with presets.
+- **Results table** — select rows, per-column sorting, live search filter,
+  sticky header, subject/email truncation with tooltips.
+- **Toolbar** — copy selected emails, copy all rows, remove duplicates.
+- **Export** — download as **CSV** or **JSON**.
+- **Auto-check** — toggle to automatically re-check the mailbox every 30s and
+  append only new messages (deduped by Message-ID).
+- **Clear error display** — connection errors and per-message parse errors are
+  shown on the page (the "update check error" you asked for).
 
 ---
 
-## Repository Layout
+## How it looks
+
+Single-page UI: a 2-column form (connection + folders) on the left, fields + range
+on the right, then progress and a large results table below. Plain HTML/CSS/JS,
+no framework, no build step.
+
+---
+
+## Requirements
+
+- Python 3.9+
+- `pip install -r backend/requirements.txt` (only **Flask** — IMAP uses the stdlib)
+
+---
+
+## Run it
+
+```bash
+# 1. install the one dependency
+cd backend
+pip install -r requirements.txt
+
+# 2. start the server
+python app.py          # Flask on http://localhost:5000
+
+# 3. open the app
+# http://localhost:5000
+```
+
+The backend serves the static frontend (`frontend/index.html`, `.css`, `.js`),
+so one command runs the whole app.
+
+Optionally set a different port:
+
+```bash
+PORT=8000 python app.py   # Windows: $env:PORT=8000; python app.py
+```
+
+---
+
+## Project layout
 
 ```
-subdomain-generator/
-├── backend/                  # Express REST API (deployed to Vercel as a serverless function)
-│   ├── api/index.ts          # Vercel serverless entrypoint (exports the Express app)
-│   ├── src/
-│   │   ├── controllers/      # email + dns request handling
-│   │   ├── services/         # imap, dns, export
-│   │   ├── middleware/       # security, rate-limit, errors
-│   │   ├── config/           # env config
-│   │   └── types/            # shared contracts
-│   ├── vercel.json           # serverless function config
+extractor email/
+├── backend/                  # Python Flask app
+│   ├── app.py                # Flask routes (test/connect/folders/extract/export + static)
+│   ├── imap_extractor.py     # IMAP logic via stdlib imaplib + email
+│   ├── requirements.txt      # flask
 │   └── .env.example
-└── frontend/                 # Next.js dashboard (deployed to Vercel)
-    ├── src/
-    │   ├── app/              # pages (email-extraction, dns-lookup) + layout
-    │   ├── components/       # ui + feature components
-    │   ├── hooks/            # useEmailExtraction, useDnsLookup
-    │   ├── lib/              # api client, utils
-    │   └── types/
-    ├── vercel.json
-    └── .env.example
+└── frontend/                 # static UI, served by Flask
+    ├── index.html
+    ├── styles.css
+    └── app.js                # all client logic (fetch, table, exports, auto-check)
 ```
 
 ---
 
-## Local Development
+## API
 
-### 1. Backend API
-```bash
-cd backend
-npm install
-npm run dev            # http://localhost:4000
-```
-
-### 2. Frontend dashboard
-```bash
-cd frontend
-npm install
-npm run dev            # http://localhost:3000
-```
-
-Open **http://localhost:3000**. Without `NEXT_PUBLIC_API_URL`, the frontend proxies `/api/*` to `http://localhost:4000` (configurable via `NEXT_PUBLIC_API_PROXY`).
+| Method | Route                   | Body                                   | Returns                         |
+| ------ | ----------------------- | -------------------------------------- | ------------------------------- |
+| GET    | `/api/health`           | —                                      | `{status:"ok"}`                 |
+| POST   | `/api/test-connection`  | `{email,password,host?,port?}`         | `{success,provider,error?}`     |
+| POST   | `/api/folders`          | `{email,password,host?,port?}`         | `{folders:[...]}`               |
+| POST   | `/api/extract`          | `{email,password,folders,startFrom,count,fields}` | `{results,stats}` |
+| POST   | `/api/export`           | `{data:[...], format:"csv"\|"json"}`   | file download                   |
 
 ---
 
-## Deploy to Vercel (two projects, GitHub integration)
+## Security
 
-MailCMH ships as **two separate Vercel projects** sharing this one GitHub repository. Each Vercel project is configured with a **Root Directory**, so a push to `main` auto-deploys both.
-
-### Project 1 — Backend API
-1. Push this repo to GitHub.
-2. In Vercel: **New Project → Import** the repo.
-3. Set **Framework Preset** to *Other* and **Root Directory** to **`backend`**.
-4. Add environment variables (Project → Settings → Environment Variables) as needed:
-   - `CORS_ORIGIN` — set to your frontend URL (e.g. `https://your-app.vercel.app`) or `*` for development.
-   - `EXTRACTION_RATE_LIMIT_MAX`, `MAX_EXTRACTION_COUNT`, `MAX_CONCURRENT_EXTRACTIONS` (optional).
-5. Deploy. Note your backend URL: `https://<your-backend>.vercel.app`.
-
-> Entry point is `backend/api/index.ts` (`vercel.json` routes all `/api/*` and `/` to it). Requires **Node 20.x** on the function runtime.
-
-### Project 2 — Frontend
-1. In Vercel: **New Project → Import** the same repo.
-2. **Framework Preset** auto-detects *Next.js*. Set **Root Directory** to **`frontend`**.
-3. Add env var:
-   - `NEXT_PUBLIC_API_URL` = `https://<your-backend>.vercel.app`  *(no trailing slash)*
-4. Deploy. Open `https://<your-app>.vercel.app`.
-
-### GitHub auto-deploy
-Once both projects are connected to the repo, every push to `main` triggers rebuilds of both projects (configure in Vercel → Project → Settings → Git → "Deploy Hooks" / production branch).
-
----
-
-## Environment Variables
-
-| Variable                    | Default               | Used by   | Description                                 |
-| --------------------------- | --------------------- | --------- | ------------------------------------------- |
-| `PORT`                      | `4000`                | backend   | local HTTP port                             |
-| `NODE_ENV`                  | `development`         | backend   | runtime environment                         |
-| `CORS_ORIGIN`               | `*`                   | backend   | allowed origin(s), comma separated          |
-| `RATE_LIMIT_WINDOW_MS`      | `60000`               | backend   | rate-limit window                           |
-| `RATE_LIMIT_MAX`            | `120`                 | backend   | requests per window per IP                  |
-| `EXTRACTION_RATE_LIMIT_MAX` | `10`                  | backend   | extraction requests per window per IP       |
-| `MAX_EXTRACTION_COUNT`      | `1000`                | backend   | max emails per extraction request           |
-| `MAX_CONCURRENT_EXTRACTIONS`| `5`                   | backend   | concurrent extractions across all clients   |
-| `NEXT_PUBLIC_API_URL`       | *(empty → local proxy)* | frontend | backend base URL (baked in at build time)   |
-| `NEXT_PUBLIC_API_PROXY`     | `http://localhost:4000` | frontend | local dev proxy target (when API_URL empty) |
-
----
-
-## API Reference (summary)
-
-**Health:** `GET /api/health`
-
-**Email:**
-- `POST /api/email/test-connection` — `{ email, password, host?, port? }`
-- `POST /api/email/folders` — `{ email, password, host?, port? }`
-- `POST /api/email/extract` — SSE stream; `{ email, password, folders, startFrom, count, fields }`
-- `POST /api/email/export` — `{ data, fields, format: csv|json|xlsx|txt }`
-
-**DNS:**
-- `GET /api/dns/types`
-- `POST /api/dns/lookup` — `{ domain, types }`
-
----
-
-## Security Notes
-
-- Mailbox credentials are **in-memory per request only** — never logged, stored, or returned by the API.
-- Logger redacts password/secret keys.
-- Rate limits (global + extraction) and per-request extraction caps prevent abuse.
-- Zod validation on every input; Helmet headers; CORS locked via `CORS_ORIGIN`.
-- Clean human-readable error messages; full details are kept server-side only.
-
----
-
-## Quality
-
-```bash
-# Backend
-cd backend
-npm run typecheck            # TypeScript
-npm run typecheck:serverless # serverless entrypoint typecheck
-npm run build                # production compile
-
-# Frontend
-cd frontend
-npm run typecheck
-npm run build                # Next.js production build
-```
+- Credentials are used in-memory for the single request and never logged or stored.
+- Only `email`, `password`, `host`, `port` are accepted — nothing else is persisted.
+- Errors are human-friendly and never expose stack traces or secrets.
 
 ## License
 
